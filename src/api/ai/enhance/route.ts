@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     }
     
     // Check if user has exceeded rate limits
-    const recentRequests = await prisma.AIRequest.count({
+    const recentRequests = await prisma.aIRequest.count({
       where: {
         userId: session.user.id,
         createdAt: {
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     const enhancedContent = await enhanceContent(content, type, tone);
     
     // Log the request
-    await prisma.AIRequest.create({
+    await prisma.aIRequest.create({
       data: {
         userId: session.user.id,
         requestType: `enhance-${type}`,
