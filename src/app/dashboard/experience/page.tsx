@@ -18,7 +18,21 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
+
+interface Experience {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  startDate: string;
+  endDate: string | null;
+  description: string;
+  current: boolean;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Mock data for experience
 const mockExperience = [

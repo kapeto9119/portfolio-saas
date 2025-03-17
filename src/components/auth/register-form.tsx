@@ -1,170 +1,175 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { signIn } from 'next-auth/react'
+
+import { Button } from '@/components/ui/button'
 import {
   Form,
-  FormField,
-  FormLabel,
   FormControl,
-  FormMessage,
+  FormField,
   FormItem,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Icons } from '@/components/icons'
 
-// Define schema for form validation
-const registerSchema = z.object({
-  email: z.string()
-    .email("Please enter a valid email address")
-    .min(1, "Email is required"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
-  confirmPassword: z.string()
-    .min(1, "Please confirm your password"),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+// Register form validation schema
+const registerSchema = z
+  .object({
+    email: z.string().email('Please enter a valid email address'),
+    password: z
+      .string()
+      .min(6, 'Password must be at least 6 characters')
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/,
+        'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      ),
+    confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
-// Define the form values type from the schema
-type RegisterFormValues = z.infer<typeof registerSchema>;
+// Type for the register form data
+type RegisterFormValues = z.infer<typeof registerSchema>
 
 export function RegisterForm() {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
-  // Initialize form with zod resolver
+  // React Hook Form with Zod validation
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
-    mode: "onBlur", // Validate on blur for a better user experience
-  });
+  })
 
-  const onSubmit = useCallback(async (data: RegisterFormValues) => {
-    setLoading(true);
+  // Handle form submission
+  const onSubmit = async (data: RegisterFormValues) => {
+    setIsLoading(true)
     
     try {
-      // Send registration request to API
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
+      // Register the user
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: data.email,
           password: data.password,
         }),
-      });
-      
-      const result = await response.json();
-      
+      })
+
+      const result = await response.json()
+
       if (!response.ok) {
-        // Show specific error message based on the error type
-        const errorMessage = result.error || "Registration failed";
-        
-        // Handle specific error cases
-        if (result.code === "EMAIL_EXISTS") {
-          form.setError("email", { 
-            type: "manual", 
-            message: "This email is already registered" 
-          });
-          toast.error("This email is already registered");
+        if (response.status === 409) {
+          toast.error('User with this email already exists')
         } else {
-          toast.error(errorMessage);
+          toast.error(result.error || 'Registration failed')
         }
-        
-        return;
+        return
       }
-      
-      // Registration successful
-      toast.success("Account created successfully!");
-      
-      // Redirect to login page after a short delay
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 1500);
-      
+
+      // Login the user automatically after successful registration
+      const signInResult = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+      })
+
+      if (!signInResult?.ok) {
+        toast.error('Registration successful, but could not sign in automatically. Please sign in manually.')
+        router.push('/auth/login')
+        return
+      }
+
+      // Redirect to dashboard on success
+      toast.success('Account created successfully')
+      router.push('/dashboard')
+      router.refresh()
     } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("An unexpected error occurred. Please try again.");
+      console.error('Registration error:', error)
+      toast.error('Something went wrong, please try again')
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  }, [form, router]);
+  }
 
   return (
-    <div>
-      <Form form={form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Email Field */}
+    <div className="flex w-full flex-col space-y-6">
+      <div className="mb-4 flex flex-col space-y-2 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your details to create your account
+        </p>
+      </div>
+
+      <div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem className="space-y-2">
+              <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input 
-                    id="email" 
+                    placeholder="email@example.com" 
                     type="email" 
-                    placeholder="your@email.com" 
-                    autoComplete="email"
                     {...field} 
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
-          {/* Password Field */}
+          
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem className="space-y-2">
+              <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input 
-                    id="password" 
+                    placeholder="••••••••" 
                     type="password" 
-                    autoComplete="new-password"
                     {...field} 
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
-                <p className="text-xs text-muted-foreground">
-                  Must be at least 8 characters with uppercase, lowercase, and numbers
-                </p>
               </FormItem>
             )}
           />
-
-          {/* Confirm Password Field */}
+          
           <FormField
             control={form.control}
             name="confirmPassword"
             render={({ field }) => (
-              <FormItem className="space-y-2">
+              <FormItem>
                 <FormLabel>Confirm Password</FormLabel>
                 <FormControl>
                   <Input 
-                    id="confirmPassword" 
+                    placeholder="••••••••" 
                     type="password" 
-                    autoComplete="new-password"
                     {...field} 
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -174,13 +179,29 @@ export function RegisterForm() {
 
           <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full"
+            disabled={isLoading}
           >
-            {loading ? "Creating account..." : "Create account"}
+            {isLoading ? (
+              <>
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> 
+                Creating account...
+              </>
+            ) : (
+              'Create Account'
+            )}
           </Button>
         </form>
-      </Form>
+      </div>
+
+      <div className="flex justify-center text-sm">
+        <p>
+          Already have an account?{' '}
+          <Link href="/auth/login" className="font-semibold text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
-  );
+  )
 }

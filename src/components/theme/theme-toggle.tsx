@@ -34,7 +34,7 @@ export function ThemeToggle({ className, iconOnly = false }: ThemeToggleProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
           size="icon" 

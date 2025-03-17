@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, ExternalLink, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Plus, ExternalLink, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Portfolio {
@@ -25,18 +26,31 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    loadPortfolios();
-  }, []);
+    console.log('Session status:', status);
+    console.log('Session data:', session);
+    if (status === 'authenticated') {
+      loadPortfolios();
+    }
+  }, [status]);
 
   const loadPortfolios = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/portfolios');
+      const response = await fetch('/api/portfolio', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to load portfolios');
+        const errorData = await response.text();
+        console.error('Portfolio response error:', response.status, errorData);
+        throw new Error(`Failed to load portfolios: ${response.status}`);
       }
       
       const data = await response.json();
@@ -56,8 +70,12 @@ export default function DashboardPage() {
 
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/portfolios?id=${id}`, {
+      const response = await fetch(`/api/portfolio?id=${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -83,6 +101,33 @@ export default function DashboardPage() {
       day: 'numeric',
     });
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="h-screen flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2">Loading session...</p>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="h-screen flex flex-col justify-center items-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Authentication Required</h1>
+        <p className="text-muted-foreground mb-4">You need to be logged in to access this page</p>
+        <div className="flex space-x-4">
+          <Button onClick={() => router.push('/auth/login')}>
+            Sign In
+          </Button>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -167,7 +212,7 @@ export default function DashboardPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => window.open(`/p/${portfolio.slug}`, '_blank')}
+                        onClick={() => window.open(`/${portfolio.slug}`, '_blank')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" /> View
                       </Button>

@@ -129,7 +129,9 @@ export const authOptions: NextAuthOptions = {
   // Configure various security options
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === 'production' 
+        ? `__Secure-next-auth.session-token` 
+        : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -138,7 +140,8 @@ export const authOptions: NextAuthOptions = {
       }
     }
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug logs temporarily
 }
 
+// Export NextAuth handlers for use in API route
 export const { handlers, auth, signIn, signOut } = NextAuth(authOptions) 

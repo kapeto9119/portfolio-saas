@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { signIn } from "next-auth/react";
 
 // Define validation schema for registration
 const registerSchema = z.object({

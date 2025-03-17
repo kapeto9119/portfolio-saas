@@ -56,16 +56,6 @@ export async function GET(req: NextRequest) {
       },
       orderBy: {
         updatedAt: 'desc',
-      },
-      // Only return necessary fields for better performance
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        isPublished: true,
-        updatedAt: true,
-        createdAt: true,
-        viewCount: true,
       }
     });
     
