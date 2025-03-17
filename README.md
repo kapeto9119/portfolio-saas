@@ -1,138 +1,167 @@
-# Portfolio SaaS: Modern Portfolio Builder
+# Portfolio SaaS Platform
 
-A feature-rich SaaS application that allows users to create and manage professional portfolios with ease. Built with modern technologies and best practices.
+A modern, full-stack portfolio creation platform built with Next.js 14, TypeScript, Tailwind CSS, and PostgreSQL. Create and manage beautiful, customizable portfolios with ease.
 
-## Features
+## 🌟 Features
 
-- 🌙 **Dark/Light Mode** - Full theme support with automatic detection
-- 🔐 **Authentication** - Complete auth flow with NextAuth.js (email/password, Google, GitHub)
-- 📱 **Responsive Design** - Optimized for all screen sizes
-- 📝 **Portfolio Editor** - Intuitive interface to create and edit portfolio content
-- 📊 **Dashboard** - Analytics and statistics on portfolio views
-- 🖼️ **Modern UI** - Clean and professional user interface
-- 🔒 **Secure** - Built with security best practices
+- **Multiple Portfolio Support**: Create and manage multiple portfolios under a single account
+- **Custom Domains**: Use your own domain or our provided subdomain
+- **Modern UI/UX**: Beautiful, responsive design with dark mode support
+- **SEO Optimized**: Built-in SEO tools and meta tag management
+- **Rich Content Sections**:
+  - About Me
+  - Projects
+  - Work Experience
+  - Education
+  - Skills
+  - Testimonials
+  - Contact Information
+- **Real-time Analytics**: Track portfolio views and engagement
+- **Customization Options**:
+  - Custom color schemes
+  - Font selection
+  - Layout preferences
+  - Custom CSS support
 
-## Tech Stack
+## 🚀 Tech Stack
 
-- **Framework**: Next.js 14 with App Router
-- **UI**: Tailwind CSS, shadcn/ui components
-- **Authentication**: NextAuth.js
-- **Form Handling**: React Hook Form with Zod validation
-- **State Management**: React hooks and contexts
-- **Styling**: Tailwind CSS with CSS variables for theming
-- **Database**: PostgreSQL with Prisma ORM
+- **Frontend**:
+  - Next.js 14 (App Router)
+  - TypeScript
+  - Tailwind CSS
+  - Shadcn/ui Components
+  - Lucide Icons
 
-## Getting Started
+- **Backend**:
+  - Next.js API Routes
+  - Prisma ORM
+  - PostgreSQL
+  - NextAuth.js
 
-### Prerequisites
+- **Infrastructure**:
+  - Docker
+  - Docker Compose
+  - PostgreSQL
 
-- Node.js 18+ 
-- npm or yarn
-- PostgreSQL database
+## 📦 Prerequisites
 
-### Installation
+- Node.js 18.x or later
+- Docker and Docker Compose
+- PostgreSQL (if running locally without Docker)
+- pnpm (recommended) or npm
 
-1. Clone the repository:
+## 🛠️ Setup Instructions
+
+1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/portfolio-saas.git
    cd portfolio-saas
    ```
 
-2. Install dependencies:
+2. **Install dependencies**
    ```bash
-   npm install
-   # or
-   yarn
+   pnpm install
    ```
 
-3. Create a `.env` file based on `.env.example`:
+3. **Set up environment variables**
    ```bash
    cp .env.example .env
    ```
+   Fill in the required environment variables in `.env`:
+   ```env
+   # Database
+   DATABASE_URL="postgresql://user:password@localhost:5432/portfolio"
 
-4. Update the `.env` file with your database URL and auth providers
+   # NextAuth
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-secret-key"
 
-5. Set up the database:
-   ```bash
-   npx prisma migrate dev
+   # OAuth Providers (optional)
+   GITHUB_ID="your-github-id"
+   GITHUB_SECRET="your-github-secret"
    ```
 
-6. Start the development server:
+4. **Start the development environment**
+
+   Using Docker:
    ```bash
-   npm run dev
-   # or
-   yarn dev
+   docker-compose up -d
    ```
 
-7. Visit `http://localhost:3000` to see the application
+   Without Docker:
+   ```bash
+   # Start the development server
+   pnpm dev
+   ```
 
-## Project Structure
+5. **Run database migrations**
+   ```bash
+   pnpm prisma migrate dev
+   ```
 
-```
-src/
-├── app/                 # Next.js App Router
-│   ├── api/             # API Routes
-│   ├── auth/            # Authentication pages
-│   ├── dashboard/       # Dashboard pages
-│   └── ...
-├── components/          # React components
-│   ├── auth/            # Authentication components
-│   ├── dashboard/       # Dashboard components
-│   ├── ui/              # UI components
-│   └── ...
-├── lib/                 # Utility functions and shared code
-│   ├── auth.ts          # Authentication configuration
-│   ├── db.ts            # Database client
-│   └── utils.ts         # Utility functions
-└── ...
-```
-
-## Environment Variables
-
-The following environment variables are required:
+## 🗂️ Project Structure
 
 ```
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/portfolio_saas"
-
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key"
-
-# OAuth Providers (optional)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-GITHUB_ID="your-github-id"
-GITHUB_SECRET="your-github-secret"
+portfolio-saas/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   ├── [username]/        # Dynamic portfolio routes
+│   └── dashboard/         # Dashboard pages
+├── components/            # React components
+├── lib/                   # Utility functions and services
+├── prisma/               # Database schema and migrations
+├── public/               # Static assets
+└── types/                # TypeScript type definitions
 ```
 
-## Deployment
+## 🔒 Security
 
-This project can be deployed on Vercel, Netlify, or any other Next.js-compatible hosting service.
+- All API routes are protected with NextAuth.js authentication
+- CSRF protection enabled
+- Rate limiting on API routes
+- Secure password hashing
+- XSS protection
+- SQL injection prevention through Prisma
 
-### Deploying to Vercel
+## 🚥 API Routes
 
-1. Push your code to a GitHub repository
-2. Import your project to Vercel
-3. Set up environment variables
-4. Deploy
+- `GET /api/portfolio` - Get user's portfolios
+- `POST /api/portfolio` - Create new portfolio
+- `PUT /api/portfolio` - Update portfolio
+- `DELETE /api/portfolio` - Delete portfolio
 
-## Contributing
+## 🧪 Testing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+# Run unit tests
+pnpm test
 
-## License
+# Run e2e tests
+pnpm test:e2e
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📝 License
 
-## Acknowledgements
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📫 Support
+
+For support, email support@yourplatform.com or create an issue in the repository.
+
+## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [shadcn/ui](https://ui.shadcn.com/)
+- [Shadcn/ui](https://ui.shadcn.com/)
+- [Prisma](https://www.prisma.io/)
 - [NextAuth.js](https://next-auth.js.org/)
-- [React Hook Form](https://react-hook-form.com/)
-- [Zod](https://zod.dev/)
-- [Lucide Icons](https://lucide.dev/)
 
 

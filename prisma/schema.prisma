@@ -106,6 +106,7 @@ model Education {
   endDate     DateTime?
   description String    @db.Text
   current     Boolean   @default(false)
+  achievements String[]  // Added achievements as a string array
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -117,7 +118,7 @@ model Education {
 // Portfolio model - represents a user's portfolio page
 model Portfolio {
   id              String     @id @default(cuid())
-  slug            String     @unique
+  slug            String     // Removed @unique constraint from slug
   title           String     @default("My Portfolio")
   subtitle        String?
   description     String?    @db.Text
@@ -137,6 +138,8 @@ model Portfolio {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
+  @@unique([userId, slug]) // Combined unique constraint for userId and slug
+  @@index([slug]) // Index on slug for faster lookups
   @@index([userId])
 }
 

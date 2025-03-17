@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { generateUniqueSlug, isSlugAvailable } from '@/lib/portfolio-service';
 
 /**
  * Schema for portfolio validation
@@ -106,17 +107,19 @@ export async function POST(req: NextRequest) {
     
     const data = validationResult.data;
     
-    // Check if slug is already taken
-    const existingPortfolio = await prisma.portfolio.findUnique({
-      where: { slug: data.slug },
-      select: { id: true } // Only get the id for efficiency
-    });
+    // Check if slug is already taken for this user
+    const slugAvailable = await isSlugAvailable(data.slug, session.user.id);
     
-    if (existingPortfolio) {
-      return NextResponse.json(
-        { error: 'This slug is already in use. Please choose another.' },
-        { status: 400 }
-      );
+    if (!slugAvailable) {
+      // Try to generate a unique slug if title is provided
+      if (data.title) {
+        data.slug = await generateUniqueSlug(data.title, session.user.id);
+      } else {
+        return NextResponse.json(
+          { error: 'This slug is already in use. Please choose another.' },
+          { status: 400 }
+        );
+      }
     }
     
     // Create the portfolio
@@ -193,16 +196,18 @@ export async function PUT(req: NextRequest) {
     
     // If slug is being updated, check if it's already taken
     if (data.slug && data.slug !== existingPortfolio.slug) {
-      const slugExists = await prisma.portfolio.findUnique({
-        where: { slug: data.slug },
-        select: { id: true }
-      });
+      const slugAvailable = await isSlugAvailable(data.slug, session.user.id, id);
       
-      if (slugExists) {
-        return NextResponse.json(
-          { error: 'This slug is already in use. Please choose another.' },
-          { status: 400 }
-        );
+      if (!slugAvailable) {
+        // Try to generate a unique slug if title is provided
+        if (data.title) {
+          data.slug = await generateUniqueSlug(data.title, session.user.id, id);
+        } else {
+          return NextResponse.json(
+            { error: 'This slug is already in use. Please choose another.' },
+            { status: 400 }
+          );
+        }
       }
     }
     

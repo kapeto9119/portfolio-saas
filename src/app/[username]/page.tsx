@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
 import { 
   Briefcase, 
   Github, 
@@ -24,121 +23,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 
+// Import shared types and services
+import { Education, Experience, Project, Skill, SocialLink, CombinedPortfolio } from '@/types/portfolio';
+import { getPortfolioBySlug } from '@/lib/portfolio-service';
+
 interface PortfolioPageProps {
   params: {
     username: string;
   };
-}
-
-// Define interfaces for structured data
-interface SkillData {
-  id: string;
-  name: string;
-  category: string | null;
-  proficiency: number | null;
-  order: number;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface ExperienceData {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  startDate: Date;
-  endDate: Date | null;
-  description: string;
-  current: boolean;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface EducationData {
-  id: string;
-  degree: string;
-  school: string;
-  location: string;
-  startDate: Date;
-  endDate: Date | null;
-  description: string;
-  current: boolean;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  achievements?: string[];
-}
-
-interface ProjectData {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  liveUrl: string | null;
-  repoUrl: string | null;
-  technologies: string[];
-  isFeatured: boolean;
-  order: number;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface SocialLinkData {
-  id: string;
-  platform: string;
-  url: string;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UserData {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  bio: string | null;
-  location: string | null;
-  phone: string | null;
-  website: string | null;
-  job_title: string | null;
-  experiences: ExperienceData[];
-  education: EducationData[];
-  projects: ProjectData[];
-  skills: SkillData[];
-  socialLinks: SocialLinkData[];
-}
-
-interface PortfolioData {
-  id: string;
-  slug: string;
-  title: string;
-  subtitle: string | null;
-  description: string | null;
-  isPublished: boolean;
-  primaryColor: string | null;
-  secondaryColor: string | null;
-  fontFamily: string | null;
-  seoTitle: string | null;
-  seoDescription: string | null;
-  viewCount: number;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  user: UserData;
-}
-
-// Combined interface representing final portfolio data structure
-interface CombinedPortfolioData extends PortfolioData {
-  projects: ProjectData[];
-  skills: SkillData[];
-  experiences: ExperienceData[];
-  educations: EducationData[];
-  socialLinks: SocialLinkData[];
-  testimonials: any[]; // Empty array for now
 }
 
 // Dynamic metadata for SEO
@@ -165,67 +57,6 @@ export async function generateMetadata({ params }: PortfolioPageProps): Promise<
   };
 }
 
-async function getPortfolioBySlug(slug: string): Promise<CombinedPortfolioData | null> {
-  // Try to find the portfolio by slug
-  const portfolio = await prisma.portfolio.findUnique({
-    where: {
-      slug,
-      isPublished: true,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          bio: true,
-          location: true,
-          phone: true,
-          website: true,
-          job_title: true,
-          experiences: {
-            orderBy: {
-              startDate: 'desc',
-            },
-          },
-          education: {
-            orderBy: {
-              startDate: 'desc', 
-            },
-          },
-          projects: {
-            orderBy: [
-              { isFeatured: 'desc' },
-              { order: 'asc' },
-            ],
-          },
-          skills: {
-            orderBy: {
-              order: 'asc',
-            },
-          },
-          socialLinks: true,
-        },
-      },
-    },
-  });
-  
-  // If portfolio not found, return null
-  if (!portfolio) return null;
-  
-  // Restructure the data to maintain compatibility with the old format
-  return {
-    ...portfolio,
-    projects: portfolio.user.projects,
-    skills: portfolio.user.skills,
-    experiences: portfolio.user.experiences,
-    educations: portfolio.user.education,
-    socialLinks: portfolio.user.socialLinks,
-    testimonials: [] // Empty testimonials for now as we don't have this model yet
-  };
-}
-
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -242,21 +73,15 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
     notFound();
   }
   
-  // Update view count
-  await prisma.portfolio.update({
-    where: { id: portfolio.id },
-    data: { viewCount: { increment: 1 } },
-  });
-  
   // Group skills by category
-  const skillsByCategory = portfolio.skills.reduce((acc: Record<string, SkillData[]>, skill: SkillData) => {
+  const skillsByCategory = portfolio.skills.reduce((acc: Record<string, Skill[]>, skill: Skill) => {
     const category = skill.category || 'Other';
     if (!acc[category]) {
       acc[category] = [];
     }
     acc[category].push(skill);
     return acc;
-  }, {} as Record<string, SkillData[]>);
+  }, {} as Record<string, Skill[]>);
   
   // Custom styles based on portfolio settings
   const customStyles = {
@@ -338,7 +163,7 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
               </div>
               
               <div className="flex justify-center md:justify-start gap-2 mt-4">
-                {portfolio.socialLinks.map((link: any) => (
+                {portfolio.socialLinks.map((link: SocialLink) => (
                   <a
                     key={link.id}
                     href={link.url}
@@ -500,7 +325,7 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
                           <CardTitle>{project.title}</CardTitle>
                           {project.technologies && (
                             <CardDescription>
-                              {project.technologies}
+                              {project.technologies.join(', ')}
                             </CardDescription>
                           )}
                         </CardHeader>
@@ -563,7 +388,7 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
                           <CardTitle className="text-lg">{project.title}</CardTitle>
                           {project.technologies && (
                             <CardDescription className="text-xs">
-                              {project.technologies}
+                              {project.technologies.join(', ')}
                             </CardDescription>
                           )}
                         </CardHeader>
