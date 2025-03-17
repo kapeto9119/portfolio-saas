@@ -9,7 +9,10 @@ import NextAuth from 'next-auth'
 
 import { prisma } from '@/lib/db'
 
-// Extend the built-in session types
+/**
+ * Extended session type for NextAuth
+ * Includes user ID for database operations
+ */
 declare module 'next-auth' {
   interface Session {
     user: {
@@ -26,6 +29,8 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
+    // 30 days max session time
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: '/auth/login',
@@ -46,45 +51,52 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            password: true,
-          },
-        })
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email.toLowerCase().trim(),
+            },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              password: true,
+            },
+          })
 
-        if (!user || !user.password) {
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+
+          if (!isPasswordValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || "",
+          }
+        } catch (error) {
+          console.error('Authentication error:', error)
           return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name || "",
         }
       },
     }),
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   callbacks: {
@@ -93,20 +105,40 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub;
         session.user.name = token.name as string || "";
         session.user.email = token.email as string || "";
+        session.user.image = token.picture as string || null;
       }
 
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // Initial sign-in
       if (user) {
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
+        
+        // Try to get user image if available
+        if (account && account.provider !== 'credentials') {
+          token.picture = user.image;
+        }
       }
 
       return token;
     },
   },
+  // Configure various security options
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  },
+  debug: process.env.NODE_ENV === 'development',
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authOptions) 

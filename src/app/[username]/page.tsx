@@ -68,6 +68,7 @@ interface EducationData {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  achievements?: string[];
 }
 
 interface ProjectData {
