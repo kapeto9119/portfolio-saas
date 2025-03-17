@@ -1,0 +1,8 @@
+{
+  "name": "Portfolio Builder",
+  "short_name": "Portfolio",
+  "icons": [],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+} 

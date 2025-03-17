@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: portfolio-saas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: portfolio_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Portfolio Renderer Service
+  portfolio-renderer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portfolio-renderer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/portfolio_saas
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-nextauth-secret
+      # Add other environment variables as needed
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+
+  # AI Content Enhancer Service - Optional, can be enabled when needed
+  ai-enhancer:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    container_name: ai-enhancer
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/portfolio_saas
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./src/lib/ai:/app/ai
+    depends_on:
+      - postgres
+    profiles: ["ai"] # Only starts when explicitly included
+
+volumes:
+  postgres_data: 
