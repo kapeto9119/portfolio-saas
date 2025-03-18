@@ -1,7 +1,7 @@
 "use server";
 
-import { auth } from "@/server/services/auth-service";
-import { prisma } from "@/server/models/prisma";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 /**
  * Get the current user session
@@ -59,27 +59,31 @@ export async function getUserPortfolio() {
     return null;
   }
   
-  // Get the user's primary portfolio
+  // Get the user's primary portfolio with theme
   const portfolio = await prisma.portfolio.findFirst({
     where: { userId: user.id },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-      isPublished: true,
+    include: {
       theme: true,
-      customDomain: true,
-      seoTitle: true,
-      seoDescription: true,
-      primaryColor: true,
-      secondaryColor: true,
-      fontFamily: true,
-      viewCount: true,
-      createdAt: true,
-      updatedAt: true,
     },
   });
 
-  return portfolio;
+  if (!portfolio) {
+    return null;
+  }
+
+  // Map the portfolio data to include theme properties
+  return {
+    id: portfolio.id,
+    slug: portfolio.slug,
+    title: portfolio.title,
+    description: portfolio.description,
+    isPublished: portfolio.isPublished,
+    viewCount: portfolio.viewCount,
+    createdAt: portfolio.createdAt,
+    updatedAt: portfolio.updatedAt,
+    // Theme properties with defaults
+    primaryColor: portfolio.theme?.primaryColor ?? '#3b82f6',
+    secondaryColor: portfolio.theme?.secondaryColor ?? '#10b981',
+    fontFamily: portfolio.theme?.fontFamily ?? 'Inter',
+  };
 } 

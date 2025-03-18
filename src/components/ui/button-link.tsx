@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef } from 'react'
-import Link from 'next/link'
+import Link, { LinkProps } from 'next/link'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/utils/cn'
 
@@ -32,9 +32,9 @@ const buttonVariants = cva(
   }
 )
 
-interface ButtonLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement>,
-  VariantProps<typeof buttonVariants> {
-  href: string;
+interface ButtonLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps>,
+  VariantProps<typeof buttonVariants>,
+  LinkProps {
   external?: boolean;
   isLoading?: boolean;
   disabled?: boolean;
@@ -85,7 +85,7 @@ const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
       <Link
         className={cn(buttonVariants({ variant, size, className }))}
         href={href}
-        ref={ref as any}
+        ref={ref}
         {...props}
       >
         {content}

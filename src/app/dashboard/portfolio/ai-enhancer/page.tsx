@@ -30,7 +30,7 @@ import {
 import { Loader2, Sparkles, MessageSquarePlus, UserPlus, BrainCircuit } from "lucide-react";
 import { toast } from "sonner";
 import { EnhancementType, Tone } from "@/types/ai";
-import DashboardHeader from "@/components/dashboard/dashboard-header";
+import { DashboardHeader, PageHeader } from "@/components/dashboard/dashboard-header";
 
 // Schema for content enhancement form
 const enhanceContentSchema = z.object({
@@ -215,10 +215,10 @@ export default function AIEnhancerPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <DashboardHeader
-        heading="AI Content Enhancer"
-        text="Use AI to improve your portfolio content, generate professional bios, and get skill recommendations."
-        icon={<Sparkles className="h-6 w-6 text-blue-500" />}
+      <PageHeader
+        heading="AI Portfolio Enhancer"
+        text="Use AI to enhance your portfolio content"
+        icon={<Sparkles className="h-8 w-8" />}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 mt-8">
@@ -248,7 +248,7 @@ export default function AIEnhancerPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...enhanceForm}>
+                <Form {...enhanceForm} form={enhanceForm}>
                   <form onSubmit={enhanceForm.handleSubmit(onSubmitEnhance)} className="space-y-4">
                     <FormField
                       control={enhanceForm.control}
@@ -403,7 +403,7 @@ export default function AIEnhancerPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...skillsForm}>
+                <Form {...skillsForm} form={skillsForm}>
                   <form onSubmit={skillsForm.handleSubmit(onSubmitSkills)} className="space-y-4">
                     <FormField
                       control={skillsForm.control}
@@ -538,7 +538,7 @@ export default function AIEnhancerPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...bioForm}>
+                <Form {...bioForm} form={bioForm}>
                   <form onSubmit={bioForm.handleSubmit(onSubmitBio)} className="space-y-4">
                     <FormField
                       control={bioForm.control}

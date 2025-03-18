@@ -248,7 +248,7 @@ export default function PortfolioManagementPage() {
                 </DialogDescription>
               </DialogHeader>
               
-              <Form {...form}>
+              <Form form={form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <Tabs defaultValue="basic">
                     <TabsList className="grid w-full grid-cols-3">

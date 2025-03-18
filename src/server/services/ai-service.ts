@@ -334,21 +334,20 @@ export async function recommendSkills(
  */
 async function saveContentGeneration(
   userId: string,
-  contentType: string,
+  requestType: string,
   prompt: string,
   result: string,
-  modelUsed: string,
+  model: string,
   tokens: number,
 ): Promise<void> {
   try {
-    await prisma.aIContentGeneration.create({
+    await prisma.aIRequest.create({
       data: {
         userId,
-        contentType,
-        prompt,
-        result,
-        modelUsed,
-        tokens,
+        requestType,
+        promptLength: prompt.length,
+        responseLength: result.length,
+        model,
       },
     });
   } catch (error) {

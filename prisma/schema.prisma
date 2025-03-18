@@ -119,28 +119,29 @@ model Education {
 // Portfolio model - represents a user's portfolio page
 model Portfolio {
   id              String     @id @default(cuid())
-  slug            String     // Removed @unique constraint from slug
+  slug            String
   title           String     @default("My Portfolio")
   subtitle        String?
   description     String?    @db.Text
   isPublished     Boolean    @default(false)
-  primaryColor    String?    @default("#3b82f6")
-  secondaryColor  String?    @default("#10b981")
-  fontFamily      String?    @default("Inter")
-  seoTitle        String?
-  seoDescription  String?
   viewCount       Int        @default(0)
   
   // Relations
   userId          String
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           PortfolioTheme?
+  testimonials    Testimonial[]
+  customSections  CustomSection[]
+  mediaItems      MediaItem[]
+  contactForm     ContactForm?
+  digitalCard     DigitalCard?
   
   // Timestamps
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  @@unique([userId, slug]) // Combined unique constraint for userId and slug
-  @@index([slug]) // Index on slug for faster lookups
+  @@unique([userId, slug])
+  @@index([slug])
   @@index([userId])
 }
 
@@ -216,4 +217,118 @@ model AIRequest {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// Portfolio Theme model - for visual customization
+model PortfolioTheme {
+  id              String    @id @default(cuid())
+  portfolioId     String    @unique
+  portfolio       Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  layout          String    @default("grid") // grid, timeline, cards
+  primaryColor    String    @default("#3b82f6")
+  secondaryColor  String    @default("#10b981")
+  fontFamily      String    @default("Inter")
+  backgroundColor String    @default("#ffffff")
+  backgroundImage String?
+  customCss       String?   @db.Text
+  
+  @@index([portfolioId])
+}
+
+// Testimonial model
+model Testimonial {
+  id          String    @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  name        String
+  title       String?
+  content     String    @db.Text
+  rating      Int?      @default(5)
+  imageUrl    String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([portfolioId])
+}
+
+// Custom Section model
+model CustomSection {
+  id          String    @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  title       String
+  type        String    // gallery, audio, video, pdf, custom
+  content     Json?
+  order       Int       @default(0)
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([portfolioId])
+}
+
+// Media Gallery model
+model MediaItem {
+  id          String    @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  type        String    // image, video, audio, pdf
+  title       String?
+  description String?   @db.Text
+  url         String
+  thumbnailUrl String?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([portfolioId])
+}
+
+// Contact Form model
+model ContactForm {
+  id          String    @id @default(cuid())
+  portfolioId String    @unique
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  fields      Json      // Array of form fields with types
+  emailTo     String?   // Where to send form submissions
+  webhook     String?   // Optional webhook URL
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  submissions ContactFormSubmission[]
+
+  @@index([portfolioId])
+}
+
+// Contact Form Submission model
+model ContactFormSubmission {
+  id            String      @id @default(cuid())
+  formId        String
+  form          ContactForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  data          Json        // Submitted form data
+  createdAt     DateTime    @default(now())
+
+  @@index([formId])
+}
+
+// Digital Business Card model
+model DigitalCard {
+  id          String    @id @default(cuid())
+  portfolioId String    @unique
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  name        String
+  title       String?
+  company     String?
+  email       String?
+  phone       String?
+  website     String?
+  imageUrl    String?
+  qrCode      String?   // URL to generated QR code
+  theme       String    @default("light")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([portfolioId])
 } 

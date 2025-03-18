@@ -576,10 +576,10 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
                   <Card key={testimonial.id}>
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3 mb-4">
-                        {testimonial.avatar ? (
+                        {testimonial.imageUrl ? (
                           <div className="relative w-12 h-12 rounded-full overflow-hidden">
                             <Image 
-                              src={testimonial.avatar} 
+                              src={testimonial.imageUrl} 
                               alt={testimonial.name}
                               fill
                               className="object-cover"
@@ -594,9 +594,9 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
                         )}
                         <div>
                           <h3 className="font-medium">{testimonial.name}</h3>
-                          {testimonial.role && testimonial.company && (
+                          {testimonial.title && (
                             <p className="text-sm text-muted-foreground">
-                              {testimonial.role} at {testimonial.company}
+                              {testimonial.title}
                             </p>
                           )}
                         </div>

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import slugify from '@/utils/slugify';
-import { Portfolio, CombinedPortfolio } from '@/types/portfolio';
+import { Portfolio, CombinedPortfolio, PortfolioWithRelations, PortfolioWithTheme } from '@/types/portfolio';
+import { Prisma } from '@prisma/client';
 
 /**
  * Generate a URL-friendly slug from a title
@@ -69,24 +70,29 @@ export async function getPortfolioBySlug(
           job_title: true,
         },
       },
+      theme: true,
+      testimonials: {
+        where: { isPublished: true },
+        orderBy: { order: 'asc' },
+      },
     },
   });
   
   // If portfolio not found, return null
   if (!portfolio) return null;
-  
-  // Fetch related data
-  const [skills, projects, experiences, educations, socialLinks] = await Promise.all([
-    prisma.skill.findMany({
-      where: { userId: portfolio.userId },
-      orderBy: { order: 'asc' },
-    }),
+
+  // Get related data in parallel
+  const [projects, skills, experiences, educations, socialLinks] = await Promise.all([
     prisma.project.findMany({
       where: { userId: portfolio.userId },
       orderBy: [
         { isFeatured: 'desc' },
         { order: 'asc' },
       ],
+    }),
+    prisma.skill.findMany({
+      where: { userId: portfolio.userId },
+      orderBy: { order: 'asc' },
     }),
     prisma.experience.findMany({
       where: { userId: portfolio.userId },
@@ -109,16 +115,40 @@ export async function getPortfolioBySlug(
     });
   }
   
-  // Return combined data
-  return {
-    ...portfolio,
+  // Map the portfolio data to include theme properties at the top level
+  const mappedPortfolio: CombinedPortfolio = {
+    id: portfolio.id,
+    slug: portfolio.slug,
+    title: portfolio.title,
+    subtitle: portfolio.subtitle,
+    description: portfolio.description,
+    isPublished: portfolio.isPublished,
+    viewCount: portfolio.viewCount,
+    userId: portfolio.userId,
+    createdAt: portfolio.createdAt,
+    updatedAt: portfolio.updatedAt,
+    // Theme properties with defaults
+    primaryColor: portfolio.theme?.primaryColor ?? '#3b82f6',
+    secondaryColor: portfolio.theme?.secondaryColor ?? '#10b981',
+    fontFamily: portfolio.theme?.fontFamily ?? 'Inter',
+    // SEO fields
+    seoTitle: portfolio.title,
+    seoDescription: portfolio.description ?? '',
+    // Relations
+    user: portfolio.user,
+    theme: portfolio.theme,
     projects,
     skills,
     experiences,
     educations,
     socialLinks,
-    testimonials: [], // Empty testimonials for now as we don't have this model yet
+    testimonials: portfolio.testimonials.map(t => ({
+      ...t,
+      rating: t.rating ?? undefined,
+    })),
   };
+  
+  return mappedPortfolio;
 }
 
 /**
@@ -126,10 +156,34 @@ export async function getPortfolioBySlug(
  * @param userId The user ID
  */
 export async function getUserPortfolios(userId: string): Promise<Portfolio[]> {
-  return prisma.portfolio.findMany({
+  const portfolios = await prisma.portfolio.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
-  });
+    include: {
+      theme: true,
+    },
+  }) as PortfolioWithTheme[];
+
+  // Map the portfolios to include theme properties at the top level
+  return portfolios.map(portfolio => ({
+    id: portfolio.id,
+    slug: portfolio.slug,
+    title: portfolio.title,
+    subtitle: portfolio.subtitle,
+    description: portfolio.description,
+    isPublished: portfolio.isPublished,
+    viewCount: portfolio.viewCount,
+    userId: portfolio.userId,
+    createdAt: portfolio.createdAt,
+    updatedAt: portfolio.updatedAt,
+    // Theme properties with defaults
+    primaryColor: portfolio.theme?.primaryColor ?? '#3b82f6',
+    secondaryColor: portfolio.theme?.secondaryColor ?? '#10b981',
+    fontFamily: portfolio.theme?.fontFamily ?? 'Inter',
+    // SEO fields
+    seoTitle: portfolio.title,
+    seoDescription: portfolio.description ?? '',
+  }));
 }
 
 /**

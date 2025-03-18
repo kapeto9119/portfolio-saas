@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const { jobTitle, currentSkills, experience } = validationResult.data;
     
     // Check rate limits
-    const recentRequests = await prisma.AIRequest.count({
+    const recentRequests = await prisma.aIRequest.count({
       where: {
         userId: session.user.id,
         createdAt: {
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     const recommendedSkills = await recommendSkills(jobTitle, currentSkills, experience);
     
     // Log the request
-    await prisma.AIRequest.create({
+    await prisma.aIRequest.create({
       data: {
         userId: session.user.id,
         requestType: "recommend-skills",
