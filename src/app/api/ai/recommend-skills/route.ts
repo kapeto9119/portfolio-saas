@@ -1,128 +1,80 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { OpenAI } from "openai";
 
-import { getUser } from "@/server/services/session-service";
-import { recommendSkills } from "@/server/services/ai-service";
-import { prisma } from "@/server/models/prisma";
-
-// Define the validation schema
-const skillRecommendationSchema = z.object({
-  jobTitle: z.string().min(2, "Job title must be at least 2 characters long"),
-  currentSkills: z.array(z.string()).optional(),
-  experience: z.string().optional(),
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: Request) {
   try {
     // Check authentication
-    const user = await getUser();
-    
-    if (!user) {
-      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
-    
-    // Parse and validate request body
-    const body = await req.json();
-    const validationResult = skillRecommendationSchema.safeParse(body);
-    
-    if (!validationResult.success) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Invalid request",
-          details: validationResult.error.format(),
-        }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+
+    // Get request body
+    const { currentSkills, experience } = await req.json();
+    if (!experience) {
+      return new NextResponse("Experience description is required", { status: 400 });
     }
-    
-    const { jobTitle, currentSkills, experience } = validationResult.data;
-    
-    // Check rate limits
-    const recentRequests = await prisma.aIRequest.count({
-      where: {
-        userId: user.id,
-        createdAt: {
-          gte: new Date(Date.now() - 3600000), // Last hour
-        },
-      },
-    });
-    
-    if (recentRequests >= 10) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Rate limit exceeded. Try again later.",
-          retryAfter: "1 hour",
-        }),
-        { 
-          status: 429,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Retry-After': '3600',
-          },
-        }
-      );
-    }
-    
+
     // Generate skill recommendations
-    const recommendedSkills = await recommendSkills(jobTitle, currentSkills, experience);
-    
-    // Ensure we got results
-    if (!recommendedSkills || recommendedSkills.length === 0) {
-      throw new Error('Failed to generate skills recommendations. Please try with a different job title.');
-    }
-    
-    // Log the request
-    await prisma.aIRequest.create({
-      data: {
-        userId: user.id,
-        requestType: "recommend-skills",
-        promptLength: jobTitle.length + (JSON.stringify(currentSkills)?.length || 0) + (experience?.length || 0),
-        responseLength: JSON.stringify(recommendedSkills).length,
-        model: "gpt-4-turbo",
-      },
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a career advisor specializing in technical skills. Based on the user's experience and current skills, suggest relevant additional skills they should learn. Group skills by category and include relevance scores.",
+        },
+        {
+          role: "user",
+          content: `Experience: ${experience}\nCurrent skills: ${currentSkills.join(", ")}\n\nPlease suggest additional relevant skills.`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
     });
-    
-    return new NextResponse(
-      JSON.stringify({
-        recommendedSkills,
-      }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error: any) {
-    console.error("Error recommending skills:", error);
-    
-    // Determine the appropriate status code based on the error
-    let statusCode = 500;
-    let errorMessage = "Failed to recommend skills. Please try again later.";
-    
-    if (error.message.includes("Rate limit")) {
-      statusCode = 429;
-      errorMessage = error.message;
-    } else if (error.message.includes("Invalid request")) {
-      statusCode = 400;
-      errorMessage = error.message;
-    } else if (error.message.includes("job title")) {
-      statusCode = 400;
-      errorMessage = error.message;
-    }
-    
-    return new NextResponse(
-      JSON.stringify({
-        error: errorMessage,
-      }),
-      { 
-        status: statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+
+    // Parse the response into structured data
+    const response = completion.choices[0].message.content ?? "";
+    const skills = parseSkillSuggestions(response);
+
+    return NextResponse.json({ skills });
+  } catch (error) {
+    console.error("AI skill recommendation error:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
+}
+
+function parseSkillSuggestions(response: string | undefined): Array<{
+  name: string;
+  relevance: number;
+  category: string;
+}> {
+  if (!response) return [];
+
+  // This is a simple parser. In production, you'd want more robust parsing
+  const categories = response.split(/\n\n|\r\n\r\n/);
+  const skills: Array<{ name: string; relevance: number; category: string }> = [];
+
+  categories.forEach((category) => {
+    const lines = category.split("\n");
+    const categoryName = lines[0].replace(":", "").trim();
+
+    lines.slice(1).forEach((line) => {
+      const match = line.match(/^[-*•]?\s*([^(]+)\s*\((\d+)%\)/);
+      if (match) {
+        skills.push({
+          name: match[1].trim(),
+          relevance: parseInt(match[2], 10),
+          category: categoryName,
+        });
+      }
+    });
+  });
+
+  return skills.sort((a, b) => b.relevance - a.relevance);
 } 

@@ -82,8 +82,11 @@ export async function POST(req: NextRequest) {
     // Get and parse request body
     const body = await req.json();
     
+    // Extract theme properties from body
+    const { primaryColor, secondaryColor, fontFamily, ...portfolioData } = body;
+    
     // Validate the request body
-    const validationResult = portfolioSchema.safeParse(body);
+    const validationResult = portfolioSchema.safeParse(portfolioData);
     
     if (!validationResult.success) {
       return NextResponse.json(
@@ -112,12 +115,29 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Create the portfolio
-    const portfolio = await prisma.portfolio.create({
-      data: {
-        ...data,
-        userId: session.user.id,
-      },
+    // Create the portfolio and theme in a transaction
+    const portfolio = await prisma.$transaction(async (tx) => {
+      // Create the portfolio
+      const portfolio = await tx.portfolio.create({
+        data: {
+          ...data,
+          userId: session.user.id,
+        },
+      });
+
+      // Create the theme
+      await tx.portfolioTheme.create({
+        data: {
+          portfolioId: portfolio.id,
+          primaryColor: primaryColor || '#3b82f6',
+          secondaryColor: secondaryColor || '#10b981',
+          fontFamily: fontFamily || 'Inter',
+          layout: 'grid',
+          backgroundColor: '#ffffff',
+        },
+      });
+
+      return portfolio;
     });
     
     return NextResponse.json(portfolio, { status: 201 });
@@ -142,7 +162,7 @@ export async function PUT(req: NextRequest) {
     
     // Get and parse request body
     const body = await req.json();
-    const { id, ...data } = body;
+    const { id, primaryColor, secondaryColor, fontFamily, ...data } = body;
     
     if (!id) {
       return NextResponse.json(
@@ -201,10 +221,36 @@ export async function PUT(req: NextRequest) {
       }
     }
     
-    // Update the portfolio
-    const updatedPortfolio = await prisma.portfolio.update({
-      where: { id },
-      data: validationResult.data,
+    // Update the portfolio and theme in a transaction
+    const updatedPortfolio = await prisma.$transaction(async (tx) => {
+      // Update the portfolio
+      const portfolio = await tx.portfolio.update({
+        where: { id },
+        data: validationResult.data,
+        include: { theme: true }
+      });
+
+      // Update or create the theme
+      if (primaryColor || secondaryColor || fontFamily) {
+        await tx.portfolioTheme.upsert({
+          where: { portfolioId: portfolio.id },
+          create: {
+            portfolioId: portfolio.id,
+            primaryColor: primaryColor || '#3b82f6',
+            secondaryColor: secondaryColor || '#10b981',
+            fontFamily: fontFamily || 'Inter',
+            layout: 'grid',
+            backgroundColor: '#ffffff',
+          },
+          update: {
+            ...(primaryColor && { primaryColor }),
+            ...(secondaryColor && { secondaryColor }),
+            ...(fontFamily && { fontFamily }),
+          },
+        });
+      }
+
+      return portfolio;
     });
     
     return NextResponse.json(updatedPortfolio);

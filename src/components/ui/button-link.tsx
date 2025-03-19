@@ -71,7 +71,7 @@ const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
       return (
         <a
           className={cn(buttonVariants({ variant, size, className }))}
-          href={href}
+          href={typeof href === 'string' ? href : href.toString()}
           ref={ref}
           {...linkProps}
           {...props}

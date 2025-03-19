@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, ExternalLink, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, ExternalLink, Edit, Trash2, AlertCircle, MessageSquarePlus, BrainCircuit, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Portfolio {
@@ -136,6 +136,87 @@ export default function DashboardPage() {
         <Button onClick={() => router.push('/dashboard/portfolio-management')}>
           <Plus className="mr-2 h-4 w-4" /> Create Portfolio
         </Button>
+      </div>
+
+      {/* AI Features Quick Access */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="h-5 w-5 text-primary" />
+              Content Enhancement
+            </CardTitle>
+            <CardDescription>
+              Improve your portfolio content with AI assistance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Enhance your project descriptions, bio, and other content with AI-powered suggestions.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push('/dashboard/portfolio/ai-enhancer?tab=enhance')}
+            >
+              Enhance Content
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              Skill Recommendations
+            </CardTitle>
+            <CardDescription>
+              Get personalized skill suggestions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Discover relevant skills to learn based on your career goals and current expertise.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push('/dashboard/portfolio/ai-enhancer?tab=skills')}
+            >
+              Get Recommendations
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Bio Generator
+            </CardTitle>
+            <CardDescription>
+              Create a professional bio instantly
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Generate a compelling professional bio that highlights your experience and achievements.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push('/dashboard/portfolio/ai-enhancer?tab=bio')}
+            >
+              Generate Bio
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
 
       <Tabs defaultValue="portfolios" className="w-full">

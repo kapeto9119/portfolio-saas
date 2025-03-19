@@ -1,124 +1,52 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
-import { getUser } from "@/server/services/session-service";
-import { generateBio } from "@/server/services/ai-service";
-import { prisma } from "@/server/models/prisma";
-
-// Define the validation schema
-const bioGenerationSchema = z.object({
-  skills: z.array(z.string()).min(1, "At least one skill is required"),
-  experience: z.string().min(10, "Experience must be at least 10 characters long"),
-  education: z.string().min(10, "Education must be at least 10 characters long"),
-  tone: z.enum(["professional", "conversational", "technical", "enthusiastic", "authoritative"]),
-});
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { AI_ROLES, generateAIResponse } from "@/lib/ai/openai";
 
 export async function POST(req: Request) {
   try {
     // Check authentication
-    const user = await getUser();
-    
-    if (!user) {
-      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
-    
-    // Parse and validate request body
-    const body = await req.json();
-    const validationResult = bioGenerationSchema.safeParse(body);
-    
-    if (!validationResult.success) {
+
+    // Get request body
+    const { currentBio, experience, skills } = await req.json();
+    if (!experience && !skills?.length) {
       return new NextResponse(
-        JSON.stringify({
-          error: "Invalid request",
-          details: validationResult.error.format(),
-        }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
+        "Either experience or skills are required",
+        { status: 400 }
       );
     }
-    
-    const { skills, experience, education, tone } = validationResult.data;
-    
-    // Check rate limits
-    const recentRequests = await prisma.aIRequest.count({
-      where: {
-        userId: user.id,
-        createdAt: {
-          gte: new Date(Date.now() - 3600000), // Last hour
-        },
-      },
-    });
-    
-    if (recentRequests >= 10) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Rate limit exceeded. Try again later.",
-          retryAfter: "1 hour",
-        }),
-        { 
-          status: 429,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Retry-After': '3600',
-          },
-        }
-      );
-    }
-    
-    // Generate the bio
-    const bioContent = await generateBio(skills, experience, education, tone);
-    
-    // Log the request
-    await prisma.aIRequest.create({
-      data: {
-        userId: user.id,
-        requestType: "generate-bio",
-        promptLength: JSON.stringify({ skills, experience, education }).length,
-        responseLength: bioContent.length,
-        model: "gpt-4-turbo",
-      },
-    });
-    
-    return new NextResponse(
-      JSON.stringify({
-        bioContent,
-      }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
+
+    // Generate bio suggestions
+    const response = await generateAIResponse(
+      AI_ROLES.BIO_WRITER,
+      `Please write a professional bio based on:
+Experience: ${experience || "Not provided"}
+Skills: ${skills?.join(", ") || "Not provided"}
+Current bio (if any to improve upon): ${currentBio || "None"}
+
+Please provide three versions:
+1. Concise: A brief, impactful summary
+2. Detailed: A comprehensive professional bio
+3. Story-based: A narrative approach highlighting the journey`,
+      {
+        model: "GPT4",
+        temperature: 0.7,
+        max_tokens: 1000,
       }
     );
-  } catch (error: any) {
-    console.error("Error generating bio:", error);
-    
-    // Determine the appropriate status code based on the error
-    let statusCode = 500;
-    let errorMessage = "Failed to generate bio. Please try again later.";
-    
-    if (error.message.includes("Rate limit")) {
-      statusCode = 429;
-      errorMessage = error.message;
-    } else if (error.message.includes("Invalid request")) {
-      statusCode = 400;
-      errorMessage = error.message;
-    } else if (error.message.includes("required")) {
-      statusCode = 400;
-      errorMessage = error.message;
-    }
-    
-    return new NextResponse(
-      JSON.stringify({
-        error: errorMessage,
-      }),
-      { 
-        status: statusCode,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+
+    const suggestions = response
+      .split(/\n\n|\r\n\r\n/)
+      .filter(Boolean)
+      .map(s => s.replace(/^(Concise|Detailed|Story-based): /, ""));
+
+    return NextResponse.json({ suggestions });
+  } catch (error) {
+    console.error("Bio generation error:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 } 

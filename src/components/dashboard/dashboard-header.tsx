@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { UserNav } from "@/components/dashboard/user-nav";
@@ -61,7 +60,6 @@ export function DashboardHeader() {
           <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
         </div>
         <div className="flex items-center gap-4">
-          <ThemeToggle />
           <UserNav />
         </div>
       </div>

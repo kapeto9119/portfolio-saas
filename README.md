@@ -105,7 +105,9 @@ A modern, full-stack portfolio creation platform built with Next.js 14, TypeScri
 portfolio-saas/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
-│   ├── [username]/        # Dynamic portfolio routes
+│   ├── [slug]/            # Dynamic portfolio routes by slug
+│   ├── profile/           # User profile routes
+│   │   └── [slug]/        # Dynamic user profiles
 │   └── dashboard/         # Dashboard pages
 ├── components/            # React components
 ├── lib/                   # Utility functions and services

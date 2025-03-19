@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,24 +9,54 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Mail, Briefcase, MapPin, Link, Github, Twitter, Linkedin } from "lucide-react";
+import { User, Mail, Briefcase, MapPin, Link, Github, Twitter, Linkedin, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Mock profile data - in a real app, this would come from your database
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
-    name: session?.user?.name || "",
-    email: session?.user?.email || "",
-    bio: "Full-stack developer with expertise in React, Next.js, and Node.js. Passionate about building user-friendly web applications.",
-    jobTitle: "Senior Frontend Developer",
-    location: "San Francisco, CA",
-    website: "https://example.com",
-    github: "github",
-    twitter: "twitter",
-    linkedin: "linkedin",
+    name: "",
+    email: "",
+    bio: "",
+    job_title: "",
+    location: "",
+    website: "",
+    github: "",
+    twitter: "",
+    linkedin: "",
   });
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/profile');
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        const data = await response.json();
+        setProfile({
+          name: data.name || "",
+          email: data.email || "",
+          bio: data.bio || "",
+          job_title: data.job_title || "",
+          location: data.location || "",
+          website: data.website || "",
+          github: data.github || "",
+          twitter: data.twitter || "",
+          linkedin: data.linkedin || "",
+        });
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Failed to load profile data');
+      }
+    };
+
+    if (session?.user) {
+      fetchProfile();
+    }
+  }, [session]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -37,12 +67,81 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // In a real app, you would save the profile data to your database here
-    
-    setIsLoading(false);
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profile),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update profile');
+      }
+
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      
+      // Update session with new image URL
+      await updateSession({
+        ...session,
+        user: {
+          ...session?.user,
+          image: data.url,
+        },
+      });
+
+      toast.success('Profile picture updated successfully');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Function to get user initials for avatar fallback
@@ -74,11 +173,37 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center space-y-4">
-            <Avatar className="h-32 w-32">
-              <AvatarImage src={session?.user?.image || ""} alt={profile.name} />
-              <AvatarFallback className="text-2xl">{getUserInitials()}</AvatarFallback>
-            </Avatar>
-            <Button variant="outline">Change Picture</Button>
+            <div 
+              className="relative cursor-pointer group"
+              onClick={handleImageClick}
+            >
+              <Avatar className="h-32 w-32">
+                <AvatarImage src={session?.user?.image || ""} alt={profile.name} />
+                <AvatarFallback className="text-2xl">{getUserInitials()}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <Upload className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+            <Button 
+              variant="outline" 
+              onClick={handleImageClick}
+              disabled={isUploading}
+            >
+              {isUploading ? "Uploading..." : "Change Picture"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Click the avatar or button to change your profile picture.
+              <br />
+              Maximum file size: 5MB
+            </p>
           </CardContent>
         </Card>
 
@@ -126,6 +251,7 @@ export default function ProfilePage() {
                             className="pl-10"
                             placeholder="john@example.com"
                             type="email"
+                            disabled
                           />
                         </div>
                       </div>
@@ -143,13 +269,13 @@ export default function ProfilePage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="jobTitle">Job Title</Label>
+                        <Label htmlFor="job_title">Job Title</Label>
                         <div className="relative">
                           <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
-                            id="jobTitle"
-                            name="jobTitle"
-                            value={profile.jobTitle}
+                            id="job_title"
+                            name="job_title"
+                            value={profile.job_title}
                             onChange={handleInputChange}
                             className="pl-10"
                             placeholder="Software Developer"

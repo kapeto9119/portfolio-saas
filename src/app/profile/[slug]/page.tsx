@@ -29,16 +29,16 @@ import { getPortfolioBySlug } from '@/lib/portfolio-service';
 
 interface PortfolioPageProps {
   params: {
-    username: string;
+    slug: string;
   };
 }
 
 // Dynamic metadata for SEO
 export async function generateMetadata({ params }: PortfolioPageProps): Promise<Metadata> {
-  const { username } = params;
+  const { slug } = params;
   
   // Fetch portfolio data for metadata
-  const portfolio = await getPortfolioBySlug(username);
+  const portfolio = await getPortfolioBySlug(slug);
   
   if (!portfolio) {
     return {
@@ -65,8 +65,8 @@ function formatDate(date: Date) {
 }
 
 export default async function PortfolioPage({ params }: PortfolioPageProps) {
-  const { username } = params;
-  const portfolio = await getPortfolioBySlug(username);
+  const { slug } = params;
+  const portfolio = await getPortfolioBySlug(slug);
   
   // If portfolio doesn't exist or is not published, return 404
   if (!portfolio) {

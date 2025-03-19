@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { Analytics } from '@/components/analytics';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -40,7 +41,7 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
         <script src="/empty-file.js" defer></script>
       </head>
-      <body className={`${inter.className} min-h-screen bg-background antialiased transition-colors duration-300`}>
+      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
         <SessionProvider>
           <ThemeProvider
             attribute="class"
@@ -55,6 +56,7 @@ export default function RootLayout({
             <main className="min-h-screen">
               {children}
             </main>
+            <Toaster />
             <ToastProvider />
             <Analytics />
           </ThemeProvider>
